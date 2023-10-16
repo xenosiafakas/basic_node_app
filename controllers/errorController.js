@@ -11,11 +11,16 @@ const handleDuplicateDB = (err) => {
   return new AppError(message, 400);
 };
 
-handleValidationDB = (err) => {
+const handleValidationDB = (err) => {
   const errors = Object.values(err.errors).map((el) => el.message);
   const message = `Invalid input data ${errors.join('. ')}`;
   return new AppError(message, 400);
 };
+
+const handleJWTError = () => new AppError('Invalid token', 401);
+
+const handleJWTExpiredError = () =>
+  new AppError('Expired token. Log in again', 401);
 
 const sendErrorDev = (err, res) => {
   res.status(err.statusCode).json({
@@ -36,7 +41,7 @@ const sendErrorProd = (err, res) => {
     console.error('ERROR', err);
     res.status(500).json({
       status: 'error',
-      message: 'Something went very wrong!',
+      message: 'Something went wrong',
     });
   }
 };
@@ -51,7 +56,9 @@ module.exports = (err, req, res, next) => {
     let error = { ...err, name: err.name, isOperational: err.isOperational };
     if (error.name === 'CastError') error = handleCastErrorDB(error);
     if (error.code === 11000) error = handleDuplicateDB(error);
-    if (error.name === 'ValidationError') error = handleValidationDB(err);
+    if (error.name === 'ValidationError') error = handleValidationDB(error);
+    if (error.name === 'JsonWebTokenError') error = handleJWTError();
+    if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
     sendErrorProd(error, res);
   }
 };
